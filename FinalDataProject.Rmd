@@ -1,0 +1,949 @@
+---
+title: "FinalDataProject"
+output: html_document
+date: "2025-12-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#installs
+library(readxl)
+library(dplyr)
+library(stringr)
+library(janitor)
+library(tidyr)
+library(caret)
+```
+
+
+```{r}
+##Dataset 1
+Regional_Data_GDP_and_Personal_Income <- read_excel("Desktop/New Capstone/BEA/Regional_Data_GDP_and_Personal_Income.xlsx", 
+    skip = 4)
+
+Regional_Data_GDP_and_Personal_Income <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "Real GDP|Per capita personal income|Per capita disposable personal income|RPPs|Per capita personal consumption expenditures"))
+
+Regional_Data_GDP_and_Personal_Income <- subset(
+  Regional_Data_GDP_and_Personal_Income, 
+  select = -c(LineCode, GeoFips, `1998`, `1999`, `2000`, `2001`, `2002`, `2003`, 
+             `2004`, `2005`, `2006`, `2007`, `2008`, `2009`, `2010`, `2011`, 
+             `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, 
+             `2020`,`2021`,`2022`)
+)
+
+remove_these <- c("United States", "District of")
+pattern <- paste(remove_these, collapse = "|")
+Regional_Data_GDP_and_Personal_Income <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(!str_detect(GeoName, pattern))
+
+##SubDatasets Creation and Adjusting
+RealGDP <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "Real GDP"))
+
+RealGDP <- RealGDP %>%
+  rename(
+    RealGDP_2023 = `2023`,
+    RealGDP_2024 = `2024`
+  )
+
+RealGDP <- subset(
+  RealGDP,
+  select = -c(Description, RealGDP_2023))
+
+PC_personal_income <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "Per capita personal income"))
+
+PC_personal_income <- PC_personal_income %>%
+  rename(
+    PC_PI_2023 = `2023`,
+    PC_PI_2024 = `2024`
+  )
+
+PC_personal_income <- subset(
+  PC_personal_income,
+  select = -c(Description, PC_PI_2023))
+
+PC_disposable_personal_income <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "Per capita disposable personal income"))
+
+PC_disposable_personal_income <- PC_disposable_personal_income %>%
+  rename(
+    PC_DPI_2023 = `2023`,
+    PC_DPI_2024 = `2024`
+  )
+
+PC_disposable_personal_income <- subset(
+  PC_disposable_personal_income,
+  select = -c(Description, PC_DPI_2023))
+
+RPPs <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "RPPs"))
+
+RPPs <- RPPs %>%
+  rename(
+    RPPs_2023 = `2023`,
+    RPPs_2024 = `2024`
+  )
+
+RPPs <- subset(
+  RPPs,
+  select = -c(Description, RPPs_2024))
+
+PC_personal_consumption_exp <- Regional_Data_GDP_and_Personal_Income %>%
+  filter(str_detect(Description, "Per capita personal consumption expenditures"))
+
+PC_personal_consumption_exp <- PC_personal_consumption_exp %>%
+  rename(
+    PC_PCE_2023 = `2023`,
+    PC_PCE_2024 = `2024`
+  )
+
+PC_personal_consumption_exp <- subset(
+  PC_personal_consumption_exp,
+  select = -c(Description, PC_PCE_2023))
+```
+
+```{r}
+##Dataset 2
+Regional_Data_Percentage_Change <- read_excel("Desktop/New Capstone/BEA/Regional_Data_Percentage_Change.xlsx", 
+    skip = 4)
+
+Regional_Data_Percentage_Change <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "Real GDP|Per capita personal income|Per capita disposable personal income|RPPs|Per capita personal consumption expenditures|(number of jobs)"))
+
+Regional_Data_Percentage_Change <- subset(
+  Regional_Data_Percentage_Change, 
+  select = -c(LineCode, GeoFips, `1999`, `2000`, `2001`, `2002`, `2003`, 
+             `2004`, `2005`, `2006`, `2007`, `2008`, `2009`, `2010`, `2011`, 
+             `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, 
+             `2020`)
+)
+
+remove_these <- c("United States", "District of")
+pattern <- paste(remove_these, collapse = "|")
+Regional_Data_Percentage_Change <- Regional_Data_Percentage_Change %>%
+  filter(!str_detect(GeoName, pattern))
+
+##SubDatasets Creation and Adjusting
+Perc_RealGDP <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "Real GDP"))
+
+Perc_RealGDP <- Perc_RealGDP %>%
+  rename(
+    Perc_RealGDP_2021 = `2021`,
+    Perc_RealGDP_2022 = `2022`,
+    Perc_RealGDP_2023 = `2023`,
+    Perc_RealGDP_2024 = `2024`
+  )
+
+Perc_RealGDP <- subset(
+  Perc_RealGDP,
+  select = -c(Description, Perc_RealGDP_2021))
+
+Perc_PC_personal_income <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "Per capita personal income"))
+
+Perc_PC_personal_income <- Perc_PC_personal_income %>%
+  rename(
+    Perc_PC_PI_2021 = `2021`,
+    Perc_PC_PI_2022 = `2022`,
+    Perc_PC_PI_2023 = `2023`,
+    Perc_PC_PI_2024 = `2024`
+  )
+
+Perc_PC_personal_income <- subset(
+  Perc_PC_personal_income,
+  select = -c(Description, Perc_PC_PI_2021))
+
+Perc_PC_disposable_personal_income <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "Per capita disposable personal income"))
+
+Perc_PC_disposable_personal_income <- Perc_PC_disposable_personal_income %>%
+  rename(
+    Perc_PC_DPI_2021 = `2021`,
+    Perc_PC_DPI_2022 = `2022`,
+    Perc_PC_DPI_2023 = `2023`,
+    Perc_PC_DPI_2024 = `2024`
+  )
+
+Perc_PC_disposable_personal_income <- subset(
+  Perc_PC_disposable_personal_income,
+  select = -c(Description, Perc_PC_DPI_2021))
+
+Perc_RPPs <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "RPPs"))
+
+Perc_RPPs <- Perc_RPPs %>%
+  rename(
+    Perc_RPPs_2021 = `2021`,
+    Perc_RPPs_2022 = `2022`,
+    Perc_RPPs_2023 = `2023`,
+    Perc_RPPs_2024 = `2024`
+  )
+
+Perc_RPPs <- subset(
+  Perc_RPPs,
+  select = -c(Description, Perc_RPPs_2024))
+
+Perc_PC_personal_consumption_exp <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "Per capita personal consumption expenditures"))
+
+Perc_PC_personal_consumption_exp <- Perc_PC_personal_consumption_exp %>%
+  rename(
+    Perc_PC_PCE_2021 = `2021`,
+    Perc_PC_PCE_2022 = `2022`,
+    Perc_PC_PCE_2023 = `2023`,
+    Perc_PC_PCE_2024 = `2024`
+  )
+
+Perc_PC_personal_consumption_exp <- subset(
+  Perc_PC_personal_consumption_exp,
+  select = -c(Description, Perc_PC_PCE_2021))
+
+Perc_TotalEmployment <- Regional_Data_Percentage_Change %>%
+  filter(str_detect(Description, "(number of jobs)"))
+
+Perc_TotalEmployment <- Perc_TotalEmployment %>%
+  rename(
+    Perc_TotalEmploy_2021 = `2021`,
+    Perc_TotalEmploy_2022 = `2022`,
+    Perc_TotalEmploy_2023 = `2023`,
+    Perc_TotalEmploy_2024 = `2024`
+  )
+
+Perc_TotalEmployment <- subset(
+  Perc_TotalEmployment,
+  select = -c(Description, Perc_TotalEmploy_2021))
+```
+
+```{r}
+##Dataset 3
+Labor_Data <- read_excel("Desktop/New Capstone/BoLS/table14full24.xlsx", 
+    sheet = "table14full24", skip = 6)
+
+Labor_Data <- Labor_Data %>%
+  rename("Population_group" = "Population group")
+
+Labor_Data <- Labor_Data %>%
+  filter(str_detect(Population_group, "Total|White|Men|Women"))
+
+string_to_remove <- ",|families"
+Labor_Data <- Labor_Data[!grepl(string_to_remove, Labor_Data$Population_group), ]
+
+string_to_remove <- "District of Col"
+Labor_Data <- Labor_Data[!grepl(string_to_remove, Labor_Data$State), ]
+
+cols_to_remove <- c("State FIPS code", "Group code", "Unemployed, Error range of rate(1)")
+Labor_Data <- Labor_Data %>% select(-all_of(cols_to_remove))
+
+Labor_Data <- Labor_Data %>%
+  rename_with(~ gsub(" ", "_", .x), contains(" "))
+
+Labor_Data <- Labor_Data %>%
+  clean_names()
+
+##SubDatasets Creation and Adjusting
+
+Total_Labor <- Labor_Data %>%
+  filter(str_detect(population_group, "Total"))
+
+Total_Labor <- Total_Labor %>%
+  rename(All_civilian_non_institutional_population = civilian_non_institutional_population, All_civilian_labor_force_total = civilian_labor_force_total, All_civilian_labor_force_percent_of_population = civilian_labor_force_percent_of_population, All_employed_total = employed_total, All_employed_percent_of_population = employed_percent_of_population, All_unemployed_total = unemployed_total, All_unemployed_rate = unemployed_rate)
+
+Total_Labor <- subset(
+  Total_Labor,
+  select = -c(population_group))
+
+Women_Labor <- Labor_Data %>%
+  filter(str_detect(population_group, "Women"))
+
+Women_Labor <- Women_Labor %>%
+  rename(Women_civilian_non_institutional_population = civilian_non_institutional_population, Women_civilian_labor_force_total = civilian_labor_force_total, Women_civilian_labor_force_percent_of_population = civilian_labor_force_percent_of_population, Women_employed_total = employed_total, Women_employed_percent_of_population = employed_percent_of_population, Women_unemployed_total = unemployed_total, Women_unemployed_rate = unemployed_rate)
+
+Women_Labor <- subset(
+  Women_Labor,
+  select = -c(population_group))
+
+Men_Labor <- Labor_Data %>%
+  filter(str_detect(population_group, "Men"))
+
+Men_Labor <- Men_Labor %>%
+  rename(Men_civilian_non_institutional_population = civilian_non_institutional_population, Men_civilian_labor_force_total = civilian_labor_force_total, Men_civilian_labor_force_percent_of_population = civilian_labor_force_percent_of_population, Men_employed_total = employed_total, Men_employed_percent_of_population = employed_percent_of_population, Men_unemployed_total = unemployed_total, Men_unemployed_rate = unemployed_rate)
+
+Men_Labor <- subset(
+  Men_Labor,
+  select = -c(population_group))
+
+White_Labor <- Labor_Data %>%
+  filter(str_detect(population_group, "White"))
+
+White_Labor <- White_Labor %>%
+  rename(White_civilian_non_institutional_population = civilian_non_institutional_population, White_civilian_labor_force_total = civilian_labor_force_total, White_civilian_labor_force_percent_of_population = civilian_labor_force_percent_of_population, White_employed_total = employed_total, White_employed_percent_of_population = employed_percent_of_population, White_unemployed_total = unemployed_total, White_unemployed_rate = unemployed_rate)
+
+White_Labor <- subset(
+  White_Labor,
+  select = -c(population_group))
+```
+
+```{r}
+##Dataset 4
+all_fatal <- read_excel("Desktop/New Capstone/BoTS/all fatal.xlsx")
+
+all_fatal <- all_fatal %>%
+  fill(State, .direction = "down")
+
+remove_these <- c("United States", "District of", "Virgin", "Puerto Rico")
+pattern <- paste(remove_these, collapse = "|")
+all_fatal <- all_fatal %>%
+  filter(!str_detect(State, pattern))
+
+cols_to_remove <- c("2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020")
+all_fatal <- all_fatal %>% select(-all_of(cols_to_remove))
+
+all_fatal <- all_fatal %>%
+  clean_names()
+
+##SubDatasets Creation and Adjusting
+
+Highway_fatal <- all_fatal %>%
+  filter(str_detect(x2, "Highway"))
+
+Highway_fatal <- Highway_fatal %>%
+  rename(Highway_fatal_2021 = x2021, Highway_fatal_2022 = x2022,Highway_fatal_2023 = x2023, Highway_fatal_2024 = x2024)
+
+Highway_fatal <- subset(
+  Highway_fatal,
+  select = -c(x2))
+
+Rail_fatal <- all_fatal %>%
+  filter(str_detect(x2, "Rail"))
+
+Rail_fatal <- Rail_fatal %>%
+  rename(Rail_fatal_2021 = x2021, Rail_fatal_2022 = x2022,Rail_fatal_2023 = x2023, Rail_fatal_2024 = x2024)
+
+Rail_fatal <- subset(
+  Rail_fatal,
+  select = -c(x2))
+
+Boating_fatal <- all_fatal %>%
+  filter(str_detect(x2, "boating"))
+
+Boating_fatal <- Boating_fatal %>%
+  rename(Boating_fatal_2021 = x2021, Boating_fatal_2022 = x2022,Boating_fatal_2023 = x2023, Boating_fatal_2024 = x2024)
+
+Boating_fatal <- subset(
+  Boating_fatal,
+  select = -c(x2))
+
+Transit_fatal <- all_fatal %>%
+  filter(str_detect(x2, "Transit"))
+
+Transit_fatal <- Transit_fatal %>%
+  rename(Transit_fatal_2021 = x2021, Transit_fatal_2022 = x2022,Transit_fatal_2023 = x2023, Transit_fatal_2024 = x2024)
+
+Transit_fatal <- subset(
+  Transit_fatal,
+  select = -c(x2))
+```
+
+```{r}
+##Dataset 5
+economics <- read_excel("Desktop/New Capstone/BoTS/economics.xlsx")
+
+economics <- economics %>%
+  fill(State, .direction = "down")
+
+economics <- economics %>%
+  fill(Industry, .direction = "down")
+
+remove_these <- c("United States", "District of", "Puerto")
+pattern <- paste(remove_these, collapse = "|")
+economics <- economics %>%
+  filter(!str_detect(State, pattern))
+
+remove_these <- c("Gross domestic")
+pattern <- paste(remove_these, collapse = "|")
+economics <- economics %>%
+  filter(!str_detect(Measure, pattern))
+
+economics <- economics %>%
+  clean_names()
+
+cols_to_remove <- c("x2005", "x2010", "x2015", "x2016", "x2017", "x2018", "x2019", "x2020", "x2021")
+economics <- economics %>% select(-all_of(cols_to_remove))
+
+economics <- economics %>%
+  filter(str_detect(industry, "Total"))
+
+remove_these <- c("Population", "All")
+pattern <- paste(remove_these, collapse = "|")
+economics <- economics %>%
+  filter(!str_detect(measure, pattern))
+
+##SubDatasets Creation and Adjusting
+
+Transport_Employees <- economics %>%
+  filter(str_detect(measure, "Transportation"))
+
+Transport_Employees <- Transport_Employees %>%
+  rename(Transport_Employees_2022 = x2022,Transport_Employees_2023 = x2023, Transport_Employees_2024 = x2024)
+
+Transport_Employees <- subset(
+  Transport_Employees,
+  select = -c(industry, measure))
+
+Transport_Annual_Payroll <- economics %>%
+  filter(str_detect(measure, "Payroll"))
+
+Transport_Annual_Payroll <- Transport_Annual_Payroll %>%
+  rename(Transport_Annual_Payroll_2022 = x2022,Transport_Annual_Payroll_2023 = x2023, Transport_Annual_Payroll_2024 = x2024)
+
+Transport_Annual_Payroll <- subset(
+  Transport_Annual_Payroll,
+  select = -c(industry, measure))
+
+Transport_Business_Establishments <- economics %>%
+  filter(str_detect(measure, "Business"))
+
+Transport_Business_Establishments <- Transport_Business_Establishments %>%
+  rename(Transport_Business_Establishments_2022 = x2022,Transport_Business_Establishments_2023 = x2023, Transport_Business_Establishments_2024 = x2024)
+
+Transport_Business_Establishments <- subset(
+  Transport_Business_Establishments,
+  select = -c(industry, measure))
+
+```
+
+```{r}
+##Dataset 6
+Transport_Rev_and_Exp <- read_excel("Desktop/New Capstone/BoTS/State_and_Local_Government_Transport_Rev_and_Expenditures.xlsx")
+
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  fill(State, .direction = "down")
+
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  fill(Government, .direction = "down")
+
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  fill(Mode, .direction = "down")
+
+remove_these <- c("Gross domestic")
+pattern <- paste(remove_these, collapse = "|")
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(!str_detect(State, pattern))
+
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  clean_names()
+
+cols_to_remove <- c("x2010", "x2015", "x2016", "x2017", "x2018", "x2019")
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>% select(-all_of(cols_to_remove))
+
+remove_these <- c("United States", "District of", "Puerto")
+pattern <- paste(remove_these, collapse = "|")
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(!str_detect(state, pattern))
+
+Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(government, "State and Local"))
+
+##SubDatasets Creation and Adjusting
+
+Total_Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(mode, "Total"))
+
+Total_Rev_Transport <- Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Revenue"))
+
+Total_Rev_Transport <- Total_Rev_Transport %>%
+  rename(Total_Rev_Transport_2022 = x2022,Total_Rev_Transport_2021 = x2021, Total_Rev_Transport_2020 = x2020)
+
+Total_Rev_Transport <- subset(
+  Total_Rev_Transport,
+  select = -c(government, mode, type))
+
+Total_Exp_Transport <- Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Expenditure"))
+
+Total_Exp_Transport <- Total_Exp_Transport %>%
+  rename(Total_Exp_Transport_2022 = x2022,Total_Exp_Transport_2021 = x2021, Total_Exp_Transport_2020 = x2020)
+
+Total_Exp_Transport <- subset(
+  Total_Exp_Transport,
+  select = -c(government, mode, type))
+
+Air_Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(mode, "Air"))
+
+Air_Rev_Transport <- Air_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Revenue"))
+
+Air_Rev_Transport <- Air_Rev_Transport %>%
+  rename(Air_Rev_Transport_2022 = x2022,Air_Rev_Transport_2021 = x2021, Air_Rev_Transport_2020 = x2020)
+
+Air_Rev_Transport <- subset(
+  Air_Rev_Transport,
+  select = -c(government, mode, type))
+
+Air_Exp_Transport <- Air_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Expenditure"))
+
+Air_Exp_Transport <- Air_Exp_Transport %>%
+  rename(Air_Exp_Transport_2022 = x2022,Air_Exp_Transport_2021 = x2021, Air_Exp_Transport_2020 = x2020)
+
+Air_Exp_Transport <- subset(
+  Air_Exp_Transport,
+  select = -c(government, mode, type))
+
+Highway_Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(mode, "Highway"))
+
+Highway_Rev_Transport <- Highway_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Revenue"))
+
+Highway_Rev_Transport <- Highway_Rev_Transport %>%
+  rename(Highway_Rev_Transport_2022 = x2022,Highway_Rev_Transport_2021 = x2021, Highway_Rev_Transport_2020 = x2020)
+
+Highway_Rev_Transport <- subset(
+  Highway_Rev_Transport,
+  select = -c(government, mode, type))
+
+Highway_Exp_Transport <- Highway_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Expenditure"))
+
+Highway_Exp_Transport <- Highway_Exp_Transport %>%
+  rename(Highway_Exp_Transport_2022 = x2022,Highway_Exp_Transport_2021 = x2021, Highway_Exp_Transport_2020 = x2020)
+
+Highway_Exp_Transport <- subset(
+  Highway_Exp_Transport,
+  select = -c(government, mode, type))
+
+Transit_Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(mode, "Transit"))
+
+Transit_Rev_Transport <- Transit_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Revenue"))
+
+Transit_Rev_Transport <- Transit_Rev_Transport %>%
+  rename(Transit_Rev_Transport_2022 = x2022,Transit_Rev_Transport_2021 = x2021, Transit_Rev_Transport_2020 = x2020)
+
+Transit_Rev_Transport <- subset(
+  Transit_Rev_Transport,
+  select = -c(government, mode, type))
+
+Transit_Exp_Transport <- Transit_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Expenditure"))
+
+Transit_Exp_Transport <- Transit_Exp_Transport %>%
+  rename(Transit_Exp_Transport_2022 = x2022,Transit_Exp_Transport_2021 = x2021, Transit_Exp_Transport_2020 = x2020)
+
+Transit_Exp_Transport <- subset(
+  Transit_Exp_Transport,
+  select = -c(government, mode, type))
+
+Water_Transport_Rev_and_Exp <- Transport_Rev_and_Exp %>%
+  filter(str_detect(mode, "Water"))
+
+Water_Rev_Transport <- Water_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Revenue"))
+
+Water_Rev_Transport <- Water_Rev_Transport %>%
+  rename(Water_Rev_Transport_2022 = x2022,Water_Rev_Transport_2021 = x2021, Water_Rev_Transport_2020 = x2020)
+
+Water_Rev_Transport <- subset(
+  Water_Rev_Transport,
+  select = -c(government, mode, type))
+
+Water_Exp_Transport <- Water_Transport_Rev_and_Exp %>%
+  filter(str_detect(type, "Expenditure"))
+
+Water_Exp_Transport <- Water_Exp_Transport %>%
+  rename(Water_Exp_Transport_2022 = x2022,Water_Exp_Transport_2021 = x2021, Water_Exp_Transport_2020 = x2020)
+
+Water_Exp_Transport <- subset(
+  Water_Exp_Transport,
+  select = -c(government, mode, type))
+```
+
+```{r}
+##Dataset 7
+Hate_Crime_2024 <- read_excel("Desktop/New Capstone/FBI/hate_crime_2024/Hate_Crime_Table_11_Offenses_Offense_Type_by_Participating_State_and Federal_2024.xlsx", 
+    skip = 5)
+
+colnames(Hate_Crime_2024)[1] <- "State"
+colnames(Hate_Crime_2024)[2] <- "Total_Offenses"
+colnames(Hate_Crime_2024)[9] <- "Other_against_persons"
+colnames(Hate_Crime_2024)[16] <- "Other_against_property"
+colnames(Hate_Crime_2024)[17] <- "Crimes_against_society"
+
+Hate_Crime_2024 <- Hate_Crime_2024 %>%
+  clean_names()
+
+Hate_Crime_2024 <- Hate_Crime_2024 %>% slice(1:(n() - 10))
+
+remove_these <- c("Total", "District of", "Guam")
+pattern <- paste(remove_these, collapse = "|")
+Hate_Crime_2024 <- Hate_Crime_2024 %>%
+  filter(!str_detect(state, pattern))
+```
+
+```{r}
+##Dataset 8
+COL_index_2025 <- read_excel("Desktop/New Capstone/WPRMERI/cost-of-living-index-by-state-2025.xlsx")
+
+COL_index_2025 <- subset(
+  COL_index_2025,
+  select = -c(stateFlagCode))
+```
+
+```{r}
+##Dataset 9
+Best_States_Rankings <- read_excel("Desktop/New Capstone/USNEWS/US News Best States Rankings.xlsx")
+
+Best_States_Rankings <- Best_States_Rankings %>%
+  clean_names()
+```
+
+```{r}
+##Dataset 10
+Enrollment_In_Public_Schools <- read_excel("Desktop/New Capstone/NCES/Enrollment_In_Public_Schools.xlsx", 
+    sheet = "Digest 2024 Table 203.20", skip = 1)
+
+Enrollment_In_Public_Schools <- Enrollment_In_Public_Schools %>% slice(1:(n() - 14))
+Enrollment_In_Public_Schools <- Enrollment_In_Public_Schools[-(1:9), ]
+
+Enrollment_In_Public_Schools <- Enrollment_In_Public_Schools %>%
+  clean_names()
+
+remove_these <- c("District of")
+pattern <- paste(remove_these, collapse = "|")
+Enrollment_In_Public_Schools <- Enrollment_In_Public_Schools %>%
+  filter(!str_detect(region_state_and_jurisdiction, pattern))
+
+Enrollment_In_Public_Schools <- subset(
+  Enrollment_In_Public_Schools,
+  select = -c(fall_1990, fall_2000, fall_2011, fall_2012, fall_2013, fall_2014, fall_2015, fall_2016, fall_2017, fall_2018, fall_2019, x13, fall_2020, x15, fall_2021, x17, x19, fall_2022, x21))
+
+colnames(Enrollment_In_Public_Schools)[2] <- "fall_2023_enrollment"
+
+Enrollment_In_Public_Schools <- Enrollment_In_Public_Schools %>%
+  mutate(across(1, ~str_remove_all(., "[^a-zA-Z ]")))
+```
+
+```{r}
+##Dataset 11
+irs <- read_excel("Desktop/New Capstone/USCB/irs.xls", 
+    skip = 2)
+
+irs <- irs %>%
+  clean_names()
+
+irs <- subset(
+  irs,
+  select = -c(state_fips_code))
+
+remove_these <- c("District of")
+pattern <- paste(remove_these, collapse = "|")
+irs <- irs %>%
+  filter(!str_detect(name, pattern))
+
+irs_2022 <- irs %>%
+  filter(str_detect(year, "2022"))
+
+irs_2022 <- irs_2022 %>%
+  rename(irs_2022_total_exemptions = total_exemptions, irs_2022_poor_exemptions = poor_exemptions, irs_2022_age_65_and_over_exemptions = age_65_and_over_exemptions, irs_2022_age_65_and_over_poor_exemptions = age_65_and_over_poor_exemptions, irs_2022_child_exemptions = child_exemptions, irs_2022_poor_child_exemptions = poor_child_exemptions, irs_2022_total_exemptions_under_age_65 = total_exemptions_under_age_65, irs_2022_poor_exemptions_under_age_65 = poor_exemptions_under_age_65, irs_2022_median_agi = median_agi, irs_2022_mean_agi = mean_agi)
+
+irs_2022 <- subset(
+  irs_2022,
+  select = -c(year))
+
+irs_2021 <- irs %>%
+  filter(str_detect(year, "2021"))
+
+irs_2021 <- irs_2021 %>%
+  rename(irs_2021_total_exemptions = total_exemptions, irs_2021_poor_exemptions = poor_exemptions, irs_2021_age_65_and_over_exemptions = age_65_and_over_exemptions, irs_2021_age_65_and_over_poor_exemptions = age_65_and_over_poor_exemptions, irs_2021_child_exemptions = child_exemptions, irs_2021_poor_child_exemptions = poor_child_exemptions, irs_2021_total_exemptions_under_age_65 = total_exemptions_under_age_65, irs_2021_poor_exemptions_under_age_65 = poor_exemptions_under_age_65, irs_2021_median_agi = median_agi, irs_2021_mean_agi = mean_agi)
+
+irs_2021 <- subset(
+  irs_2021,
+  select = -c(year))
+
+irs_2020 <- irs %>%
+  filter(str_detect(year, "2020"))
+  
+irs_2020 <- irs_2020 %>%
+  rename(irs_2020_total_exemptions = total_exemptions, irs_2020_poor_exemptions = poor_exemptions, irs_2020_age_65_and_over_exemptions = age_65_and_over_exemptions, irs_2020_age_65_and_over_poor_exemptions = age_65_and_over_poor_exemptions, irs_2020_child_exemptions = child_exemptions, irs_2020_poor_child_exemptions = poor_child_exemptions, irs_2020_total_exemptions_under_age_65 = total_exemptions_under_age_65, irs_2020_poor_exemptions_under_age_65 = poor_exemptions_under_age_65, irs_2020_median_agi = median_agi, irs_2020_mean_agi = mean_agi)
+
+irs_2020 <- subset(
+  irs_2020,
+  select = -c(year))
+```
+
+```{r}
+##Dataset 12
+statesnap <- read_excel("Desktop/New Capstone/USCB/statesnap.xls", 
+    sheet = "statesnap", skip = 2)
+
+statesnap <- as.data.frame(t(statesnap))
+
+statesnap <- statesnap[, -1]
+
+statesnap <- statesnap[-c(2, 3), ]
+
+colnames(statesnap) <- statesnap[1, ]
+
+statesnap <- statesnap[-1, ]
+
+statesnap$state <- rownames(statesnap)
+rownames(statesnap) <- NULL
+
+statesnap <- statesnap %>%
+  clean_names()
+
+remove_these <- c("District of")
+pattern <- paste(remove_these, collapse = "|")
+statesnap <- statesnap %>%
+  filter(!str_detect(state, pattern))
+
+statesnap <- statesnap %>%
+  mutate(across(-last_col(), as.numeric))
+
+statesnap <- statesnap %>%
+  mutate(statesnap_2023 = rowSums(across(starts_with("x2023")), na.rm = TRUE)) %>%
+  select(-starts_with("x2023"))
+
+statesnap <- statesnap %>%
+  mutate(statesnap_2022 = rowSums(across(starts_with("x2022")), na.rm = TRUE)) %>%
+  select(-starts_with("x2022"))
+
+statesnap <- statesnap %>%
+  mutate(statesnap_2021 = rowSums(across(starts_with("x2021")), na.rm = TRUE)) %>%
+  select(-starts_with("x2021"))
+
+statesnap <- statesnap %>%
+  mutate(statesnap_2020 = rowSums(across(starts_with("x2020")), na.rm = TRUE)) %>%
+  select(-starts_with("x2020"))
+
+statesnap <- statesnap[, -c(1:468)]
+
+statesnap$statesnap_2020 <- statesnap$statesnap_2020 / 12
+statesnap$statesnap_2021 <- statesnap$statesnap_2021 / 12
+statesnap$statesnap_2022 <- statesnap$statesnap_2022 / 12
+statesnap$statesnap_2023 <- statesnap$statesnap_2023 / 6
+
+```
+
+```{r}
+##Dataset 13
+annual_health_report <- read.csv("/Users/ajohnstone/Desktop/New Capstone/AHR/2024-annual-report-report-data-all-states.csv")
+
+remove_these <- c("DC", "ALL")
+pattern <- paste(remove_these, collapse = "|")
+annual_health_report <- annual_health_report %>%
+  filter(!str_detect(State, pattern))
+
+string_to_remove <- " - "
+annual_health_report <- annual_health_report %>%
+  filter(!grepl(string_to_remove, Measure))
+
+list_of_dfs <- split(annual_health_report, annual_health_report$Measure)
+
+rename_with_prefix <- function(data_frame) {
+  prefix <- unique(data_frame$Measure)[1]
+  
+  old_names <- names(data_frame)
+
+  new_names <- paste0(prefix, "_", old_names)
+  
+  colnames(data_frame) <- new_names
+  
+  return(data_frame)
+}
+
+temp_list_of_dfs <- lapply(list_of_dfs, rename_with_prefix)
+
+cols_to_remove_indices <- c(1, 2, 7, 8, 9, 10)
+
+updated_df_list <- lapply(temp_list_of_dfs, function(df) {
+  df[, -cols_to_remove_indices]
+})
+
+updated_df_list <- updated_df_list %>%
+  clean_names()
+
+updated_df_list2 <- lapply(updated_df_list, function(df) {
+  df <- df %>%
+  clean_names()
+})
+
+rename_first_col <- function(df) {
+  colnames(df)[1] <- "state_code"
+  return(df)
+}
+
+list_of_dfs_renamed <- lapply(updated_df_list2, rename_first_col)
+
+joined_df_dplyr <- list_of_dfs_renamed %>%
+  purrr::reduce(dplyr::inner_join, by = "state_code")
+
+```
+
+```{r}
+##Dataset 14
+state_abbrev <- read.csv("/Users/ajohnstone/Desktop/New Capstone/BoLS2/data-map-state-abbreviations.csv")
+
+remove_these <- c("District of", "Puerto", "Virgin Islands", "Palau", "Samoa", "Guam", "Marshall", "Micronesia", "Marianas")
+pattern <- paste(remove_these, collapse = "|")
+state_abbrev <- state_abbrev %>%
+  filter(!str_detect(Name, pattern))
+
+merged_df <- merge(state_abbrev, joined_df_dplyr, by.x = "Abbreviation", by.y = "state_code")
+
+```
+
+```{r}
+##tables to join using state name
+
+df_list <- list(PC_disposable_personal_income,
+PC_personal_consumption_exp,
+PC_personal_income,
+RealGDP,
+RPPs,
+Perc_PC_disposable_personal_income,
+Perc_PC_personal_consumption_exp,
+Perc_PC_personal_income,
+Perc_RealGDP,
+Perc_RPPs,
+Perc_TotalEmployment,
+Men_Labor,
+Total_Labor,
+White_Labor,
+Women_Labor,
+Transport_Annual_Payroll,
+Transport_Business_Establishments,
+Transport_Employees,
+Air_Exp_Transport,
+Air_Rev_Transport,
+Highway_Exp_Transport,
+Highway_Rev_Transport,
+Transit_Exp_Transport,
+Transit_Rev_Transport,
+Water_Exp_Transport,
+Water_Rev_Transport,
+Hate_Crime_2024,
+Enrollment_In_Public_Schools,
+irs_2020,
+irs_2021,
+irs_2022,
+statesnap)
+
+
+rename_first_col <- function(df) {
+  colnames(df)[1] <- "state"
+  return(df)
+}
+
+list_of_dfs2_col1renamed <- lapply(df_list, rename_first_col)
+
+joined_df_dplyr2 <- list_of_dfs2_col1renamed %>%
+  purrr::reduce(dplyr::full_join, by = "state")
+
+##joined_df_dplyr2 <- joined_df_dplyr2 %>% 
+  ##filter(row_number() <= n() - 50)
+```
+
+```{r}
+## the final join 
+
+FINAL_df <- merge(merged_df, joined_df_dplyr2, by.x = "Name", by.y = "state")
+
+FINAL_df <- merge(FINAL_df, Best_States_Rankings, by.x = "Name", by.y = "state")
+
+FINAL_df <- subset(
+  FINAL_df,
+  select = -c(Abbreviation, binge_drinking_score, crowded_housing_score, climate_risks_score, dependency_ages_18_or_64_score, domestic_violence_score, heat_and_worker_health_value, heat_and_worker_health_score, heat_and_worker_health_rank, heavy_drinking_score, illicit_opioid_use_value, illicit_opioid_use_score, illicit_opioid_use_rank, less_than_high_school_education_score, mental_illness_in_household_score, neighborhood_violence_score, non_medical_use_of_prescription_opioids_score, non_medical_use_of_prescription_opioids_rank, parent_or_guardian_death_score, parent_or_guardian_divorce_or_separation_score, parent_or_guardian_time_in_jail_score, per_capita_income_score, poverty_score, renewable_energy_score, rural_population_score, rural_population_rank, substance_misuse_in_household_score, total_population_score, total_population_rank, transportation_energy_use_score, transportation_health_risks_score, unemployment_score, human_trafficking))
+
+FINAL_df <- FINAL_df %>%
+  clean_names()
+
+# 1. Identify where NAs are located before replacing them
+na_indices <- which(is.na(FINAL_df), arr.ind = TRUE)
+
+# 2. Create a list/dataframe of the rows and columns that will be modified
+modified_locations <- data.frame(
+  row = na_indices[, 1],
+  column_name = colnames(FINAL_df)[na_indices[, 2]]
+)
+
+# 3. Apply median imputation to each numeric column
+# We use na.rm = TRUE to ensure the median is calculated correctly
+for(i in 1:ncol(FINAL_df)) {
+  if(is.numeric(FINAL_df[[i]])) {
+    m <- median(FINAL_df[[i]], na.rm = TRUE)
+    FINAL_df[[i]][is.na(FINAL_df[[i]])] <- m
+  }
+}
+
+# 4. View the results
+print("Columns and rows that required imputation:")
+print(modified_locations)
+
+FINAL_df <- subset(
+  FINAL_df,
+  select = -c(name))
+
+FINAL_df[] <- lapply(FINAL_df, as.numeric)
+
+# 1. Identify where NAs are located before replacing them
+na_indices2 <- which(is.na(FINAL_df), arr.ind = TRUE)
+
+# 2. Create a list/dataframe of the rows and columns that will be modified
+modified_locations2 <- data.frame(
+  row = na_indices2[, 1],
+  column_name = colnames(FINAL_df)[na_indices2[, 2]]
+)
+
+# 3. Apply median imputation to each numeric column
+# We use na.rm = TRUE to ensure the median is calculated correctly
+for(i in 1:ncol(FINAL_df)) {
+  if(is.numeric(FINAL_df[[i]])) {
+    m <- median(FINAL_df[[i]], na.rm = TRUE)
+    FINAL_df[[i]][is.na(FINAL_df[[i]])] <- m
+  }
+}
+
+# 4. View the results
+print("Columns and rows that required imputation:")
+print(modified_locations2)
+```
+
+```{r}
+# Find columns where the max value equals the min value
+constant_cols <- sapply(FINAL_df, function(x) var(x, na.rm = TRUE) == 0)
+
+# List the names of the problematic columns
+names(FINAL_df)[which(constant_cols)]
+```
+
+
+```{r}
+cor_matrix <- cor(FINAL_df, use = "complete.obs")
+
+to_remove <- findCorrelation(cor_matrix, cutoff = 0.8)
+
+df_clean <- FINAL_df[, -to_remove]
+```
+
+```{r}
+## turn overall state rank into binary for top 10
+threshold <- 11
+
+df_clean$overall_state_rank <- ifelse(df_clean$overall_state_rank < threshold, 1, 0)
+```
+
+```{r}
+
+```
+
