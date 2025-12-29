@@ -1,0 +1,5 @@
+In 2022, 28.2 million Americans moved, most of which staying local to where they already lived, with 19.9% of those people relocating to a new state entirely (Pelchen). In 2025 Q1, investors are known to be responsible for nearly 27% of all homes sold, the highest percentage share of all of the past 5 years (Veiga). This percentage would equate to roughly 265,000 homes across the country being bought by investors. 
+
+As someone who has moved multiple times in their life, across state lines and within them, and has debated the idea of doing so again in the near future, providing myself and others with as much information as possible in order to do so would be a great assistance in helping make a more informed decision. 
+
+The intent of this study is to identify the most desirable States in the U.S. for residents, based off of a combination of different cost, infrastructure, and safety statistics and more. This information is intended to assist people in making more informed decisions when they are faced with an opportunity and/or decision on whether or not to move.
