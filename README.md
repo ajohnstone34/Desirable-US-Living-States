@@ -3,3 +3,5 @@ In 2022, 28.2 million Americans moved, most of which staying local to where they
 As someone who has moved multiple times in their life, across state lines and within them, and has debated the idea of doing so again in the near future, providing myself and others with as much information as possible in order to do so would be a great assistance in helping make a more informed decision. 
 
 The intent of this study is to identify the most desirable States in the U.S. for residents, based off of a combination of different cost, infrastructure, and safety statistics and more. This information is intended to assist people in making more informed decisions when they are faced with an opportunity and/or decision on whether or not to move.
+
+Please see the Data Sources branch for all necessary sourced files. 
